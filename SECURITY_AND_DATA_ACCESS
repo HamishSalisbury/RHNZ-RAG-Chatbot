@@ -1,0 +1,60 @@
+# Security and Data-access Note
+**RHNZ RAG Chatbot**
+Written by Hamish Salisbury, 2026
+
+## 1. Data Classification
+All data handled by this service is public. Player statistics are already published on the RHNZ stats site, and the World Skate Rink Hockey rules PDF is publicly available. The service handles no private data, no personally identifiable information beyond what is already public, and no end-user accounts.
+
+## 2. Data-access Model
+- API access is controlled by a token issued to RHNZ, used as a service-to-service credential for calls from the RHNZ website. There is no end-user authentication; RHNZ holds the token and is responsible for keeping it confidential.
+- Database access is read-only and least-privileged.
+- The service does not execute SQL directly. It reads data by calling the Supabase-generated PostgREST API endpoints, which translate requests into parameterised, read-only queries.
+- The service queries the live database but never writes to or modifies it.
+
+## 3. Trust Boundaries
+- The user's query is treated as untrusted input.
+- Retrieved database rows and PDF chunks are also treated as untrusted input. They are held in the data plane and never in the control plane.
+- The language model's output is never treated as a source of truth. It is used for formatting only; all factual values are pulled live from the database.
+
+## 4. Threat Model
+The threats applicable to this project are:
+- Prompt injection, via the user query or via retrieved content.
+- Injection or manipulation on the stats path, causing an unintended or overbroad data request.
+- Unauthorised API access.
+- Abuse or overload of the endpoint, including denial-of-service.
+- Accidental secret exposure in the repository.
+- Hallucinated facts from the language model.
+
+## 5. Mitigations
+| Threat | Mitigation |
+|---|---|
+| Write / data-modification attacks | Read-only endpoints, least-privilege database access |
+| Stats-path injection / unintended requests | PostgREST parameterises all requests, preventing SQL-level injection; read-only public-data access limits the impact of any unintended request |
+| Unauthorised API access | Token-based service-to-service authentication held by RHNZ |
+| Endpoint abuse / denial-of-service | Service not publicly exposed; rate limiting at the public edge (see Section 7) |
+| Prompt injection | Instruction/data separation and least-privilege prompting |
+| Hallucinated facts | Format-only design; factual values come from the database |
+| Secret exposure | Secret hygiene (see Section 6) |
+
+## 6. Secret and Credential Management
+- Secrets and configuration, including the database credentials and the RHNZ API token, are supplied through environment variables only.
+- No secrets are committed to the repository.
+- A `.env.example` is provided.
+- The repository is audited before going public: `.gitignore` verified, no committed secrets confirmed.
+
+## 7. Deployment and Production Security
+The service is packaged as a container and deployed on an application platform of RHNZ's choosing. Supabase provides only the stats database, via PostgREST, and does not host this service or the RHNZ frontend. The intended topology is an internal/private service behind the RHNZ website: the website is the only public ingress, and the service is not directly exposed to the public internet.
+
+Under this model:
+- Authentication between the website and the service uses the token-based service-to-service credential described in Section 2.
+- Rate limiting and denial-of-service protection are applied primarily at the website's public edge, since the service itself has no public surface.
+- If a platform cannot provide private networking and the service is exposed directly, rate limiting and request authentication must be enforced at the service itself.
+
+## 8. Out of Scope
+- End-user authentication. The service does not authenticate individual end users; access is controlled at the API level by the RHNZ-issued token.
+
+## 9. Residual Risk and Assumptions
+- The service assumes the upstream RHNZ site exposes only public data.
+- The service assumes the read-only account is enforced at the database.
+- The service assumes RHNZ keeps the issued API token confidential.
+- When deployed as an internal service, the service assumes the RHNZ website performs public-facing rate limiting and abuse protection.
