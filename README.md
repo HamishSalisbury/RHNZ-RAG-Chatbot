@@ -63,7 +63,6 @@ Full rationale for each of these decisions is in the Design Document below.
 ## Running Locally
 
 ```bash
-git clone INSERT_REPO_LINK_HERE
 cd rhnz-rag-chatbot
 cp .env.example .env        # fill in LLM API key, Supabase URL and read-only key
 
