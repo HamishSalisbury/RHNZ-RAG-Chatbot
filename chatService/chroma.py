@@ -1,5 +1,7 @@
 import chromadb
 from django.conf import settings
+from chromadb.api import ClientAPI
+from chromadb.api.models.Collection import Collection
 
 _client = None
 
@@ -16,3 +18,13 @@ def get_rules_collection():
         metadata={"hnsw:space": "cosine"},
         embedding_function=None,
     )
+
+def get_chroma() -> tuple[ClientAPI, Collection]:
+    """Return (client, rules_collection) in one call."""
+    client = get_chroma_client()
+    collection = client.get_or_create_collection(
+        name="rules",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=None,
+    )
+    return client, collection
