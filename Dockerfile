@@ -15,8 +15,8 @@ RUN python -c "import os; from sentence_transformers import SentenceTransformer;
     SentenceTransformer(os.environ['EMBEDDING_MODEL'])"
 
 COPY knowledge/ ./knowledge/
-# COPY ingestion/ ./ingestion/
-# RUN python -m ingestion.build_index
+COPY ingestion/ ./ingestion/
+RUN python -m ingestion.build_index
 
 COPY . .
 
