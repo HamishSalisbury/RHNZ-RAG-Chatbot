@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+from pathlib import Path
 
 logger = logging.getLogger("ingestion.build_index")
 logging.basicConfig(level=logging.DEBUG)
@@ -12,7 +13,11 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
 
     TODO: implement. .
     """
-    print(f"Building index from {source} to {output}, force={force}")
+    print(get_files_to_index(Path(source)))
+
+def get_files_to_index(root: str) -> list[str]:
+    """Search the knowledge directory for files to index. Returns a list of file paths."""
+    return [str(f) for f in Path(root).rglob("*") if f.is_file()]
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
