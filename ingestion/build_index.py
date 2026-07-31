@@ -5,6 +5,7 @@ import os
 import re
 import sys
 from pathlib import Path
+import hashlib
 
 import fitz
 from dotenv import load_dotenv
@@ -41,16 +42,40 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
     tokenizer = model.tokenizer
     knowledge_files = get_files_to_index(Path(source))
     print(knowledge_files)
-
+    texts, ids, metadatas = [], [], []
     for file in knowledge_files:
+        source = Path(file).name
+        chunk_index = 0
+
         logger.info(f"Indexing file: {file}")
         with fitz.open(file) as f:
             for page_no, page in enumerate(f):
                 text = page.get_text("text")
                 for paragraph in chunk_paragraphs(text):
                     for piece in split_with_overlap(paragraph, tokenizer, MAX_TOKENS):
-                        print("-----")
-                        print(repr(piece))
+                        texts.append(piece)
+                        ids.append(make_chunk_id(source, page_no, chunk_index, piece))
+                        metadatas.append({
+                            "source":source,
+                            "page":page_no,
+                            "chunk_index":chunk_index,
+                            "rude_id": "rule" # Rule deriviaton delegated to M2
+                        })
+     
+    logger.info("Produced %d chunks", len(texts))
+
+    logger.info("Embedding %d chunks...", len(texts))
+
+    embeddings = model.encode(
+        texts,
+        batch_size=32,
+        normalize_embeddings=True,
+        show_progress_bar=True # TODO urn of in docker builds 
+    )
+
+def make_chunk_id(source: str, page: int, chunk_index: int, text: str) -> str:
+    payload = f"{source}|{page}|{chunk_index}|{text}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
 
 def get_files_to_index(root: str) -> list[str]:
     """Search the knowledge directory for files to index. Returns a list of file paths."""
