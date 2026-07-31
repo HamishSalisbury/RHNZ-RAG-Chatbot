@@ -6,7 +6,7 @@ import re
 import sys
 from pathlib import Path
 import hashlib
-
+from datetime import datetime, timezone
 import fitz
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
@@ -24,7 +24,7 @@ def require_env(name: str) -> str:
         raise MissingEnvVar(name=name)
     return value
 
-
+CHUNKER_VERSION= "1" # Bump when chunking logic changes - forces rebuild
 EMBEDDING_MODEL_NAME = require_env("EMBEDDING_MODEL")
 MAX_TOKENS = int(require_env("MAX_TOKENS"))
 PARAGRAPH_OVERLAP_TOKENS = 64
@@ -72,6 +72,17 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
         normalize_embeddings=True,
         show_progress_bar=True # TODO urn of in docker builds 
     )
+
+def compute_source_hash(files: list[str]) -> str:
+    h = hashlib.sha256()
+
+    for f in sorted(files):
+        h.update(Path(f).read_bytes())
+
+    h.update(CHUNKER_VERSION.encode())
+    h.update(EMBEDDING_MODEL_NAME.encode())
+
+    return h.hexdigest()
 
 def make_chunk_id(source: str, page: int, chunk_index: int, text: str) -> str:
     payload = f"{source}|{page}|{chunk_index}|{text}"
