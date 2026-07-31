@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import fitz
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
+import chromadb
 
 from ingestion.errors import MissingEnvVar, KnowledgeDirNotFound
 
@@ -41,10 +42,9 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
     model = SentenceTransformer(EMBEDDING_MODEL_NAME)
     tokenizer = model.tokenizer
     knowledge_files = get_files_to_index(Path(source))
-    print(knowledge_files)
     texts, ids, metadatas = [], [], []
     for file in knowledge_files:
-        source = Path(file).name
+        source_name = Path(file).name
         chunk_index = 0
 
         logger.info(f"Indexing file: {file}")
@@ -54,13 +54,14 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
                 for paragraph in chunk_paragraphs(text):
                     for piece in split_with_overlap(paragraph, tokenizer, MAX_TOKENS):
                         texts.append(piece)
-                        ids.append(make_chunk_id(source, page_no, chunk_index, piece))
+                        ids.append(make_chunk_id(source_name, page_no, chunk_index, piece))
                         metadatas.append({
-                            "source":source,
+                            "source":source_name,
                             "page":page_no,
                             "chunk_index":chunk_index,
-                            "rude_id": "rule" # Rule deriviaton delegated to M2
+                            "rule_id": "rule" # Rule deriviaton delegated to M2
                         })
+                        chunk_index+=1
      
     logger.info("Produced %d chunks", len(texts))
 
@@ -73,6 +74,44 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
         show_progress_bar=True # TODO urn of in docker builds 
     )
 
+    client = chromadb.PersistentClient(path=output)
+
+    try:
+        client.delete_collection("knowledge")
+    except Exception:
+        # First ever run - nothing to delete
+        pass
+
+    collection = client.create_collection(
+        name="knowledge",
+        metadata= {
+            "source_hash": compute_source_hash(knowledge_files),
+            "last_built_at":datetime.now(timezone.utc).isoformat(),
+            "chunker_version": CHUNKER_VERSION,
+            "embedding_model":EMBEDDING_MODEL_NAME
+
+        }
+    )
+
+    for start in range(0, len(ids), 256):
+        collection.add(
+            ids=ids[start:start+256],
+            documents=texts[start:start+256],
+            embeddings=embeddings[start:start+256].tolist(),
+            metadatas=metadatas[start:start+256]
+        )
+    logger.info("Stored %d chunks in collection 'knowledge'", collection.count())
+
+    # Embed a test question — must use the same model as the index
+    # and the same normalization, or the distances are meaningless
+    q = model.encode(["how high can a player hold their stick?"],
+                    normalize_embeddings=True)
+    # Nearest-neighbour search: return the 3 most similar chunks
+    res = collection.query(query_embeddings=q.tolist(), n_results=3)
+    # Results are nested per-query: [0] = first query, [0] = its top hit.
+    # Should print Article 9's timeout text.
+    print(res["documents"][0][0])
+
 def compute_source_hash(files: list[str]) -> str:
     h = hashlib.sha256()
 
@@ -83,6 +122,8 @@ def compute_source_hash(files: list[str]) -> str:
     h.update(EMBEDDING_MODEL_NAME.encode())
 
     return h.hexdigest()
+
+
 
 def make_chunk_id(source: str, page: int, chunk_index: int, text: str) -> str:
     payload = f"{source}|{page}|{chunk_index}|{text}"
@@ -127,7 +168,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         prog="python -m ingestion.build_index",
         description="Build the ingestion index.",
     )
-    parser.add_argument("--source", default="data", help="Source directory.")
+    parser.add_argument("--source", default="knowledge", help="Source directory.")
     parser.add_argument("--output", default="index", help="Output directory.")
     parser.add_argument("--force", action="store_true", help="Rebuild even if up to date.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging.")
