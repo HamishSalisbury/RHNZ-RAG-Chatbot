@@ -48,29 +48,43 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
             for page_no, page in enumerate(f):
                 text = page.get_text("text")
                 for paragraph in chunk_paragraphs(text):
-                    print(split_with_overlap(paragraph, tokenizer, MAX_TOKENS))
+                    for piece in split_with_overlap(paragraph, tokenizer, MAX_TOKENS):
+                        print("-----")
+                        print(repr(piece))
 
 def get_files_to_index(root: str) -> list[str]:
     """Search the knowledge directory for files to index. Returns a list of file paths."""
     return [str(f) for f in Path(root).rglob("*") if f.is_file()]
 
 def split_with_overlap(text: str, tokenizer, max_tokens: int) -> list[str]:
-    token_ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(token_ids) <= max_tokens:
-        return list[text]
-
+    enc = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)
+    ids, offsets = enc["input_ids"], enc["offset_mapping"]
+    if len(ids) <= max_tokens:
+        return [text]
     step = max_tokens - PARAGRAPH_OVERLAP_TOKENS
     pieces = []
-    for start in range(0, len(token_ids), step):
-        window = token_ids[start : start + max_tokens]
-        pieces.append(tokenizer.decode(window).strip())
-        if start + max_tokens >= len(token_ids):
+    for start in range(0, len(ids), step):
+        end = min(start + max_tokens, len(ids))
+        start_char = offsets[start][0]
+        end_char = offsets[end - 1][1]
+        pieces.append(text[start_char:end_char].strip())
+        if end == len(ids):
             break
     return pieces
 
 
+TOC_LINE = re.compile(r"\.{4,}|…{2,}")   # dotted/ellipsis leaders = table of contents
+
 def chunk_paragraphs(text: str) -> list[str]:
-    return [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    paragraphs = []
+    for p in re.split(r"\n\s*\n", text):
+        p = p.replace("\u200b", "").strip()
+        if len(p) < 20:              # page numbers, empty/ZWSP-only fragments
+            continue
+        if TOC_LINE.search(p):       # contents pages
+            continue
+        paragraphs.append(p)
+    return paragraphs
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
