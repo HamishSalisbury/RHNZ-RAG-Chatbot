@@ -1,17 +1,31 @@
 """CLI entry point for ``python -m ingestion.build_index``."""
-
 import argparse
 import logging
+import os
 import re
 import sys
 from pathlib import Path
-import fitz
 
-from django.utils import text
+import fitz
+from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
+
+from ingestion.errors import MissingEnvVar, KnowledgeDirNotFound
 
 logger = logging.getLogger("ingestion.build_index")
-logging.basicConfig(level=logging.DEBUG)
 
+load_dotenv()
+
+
+def require_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise MissingEnvVar(name=name)
+    return value
+
+
+EMBEDDING_MODEL_NAME = require_env("EMBEDDING_MODEL")
+MAX_TOKENS = int(require_env("MAX_TOKENS"))
 PARAGRAPH_OVERLAP_TOKENS = 64
 
 def build_index(source: str, output: str, *, force: bool = False) -> None:
@@ -19,6 +33,12 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
 
     TODO: implement. .
     """
+    root = Path(source)
+    if not root.is_dir():
+        raise KnowledgeDirNotFound(path=root)
+
+    model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    tokenizer = model.tokenizer
     knowledge_files = get_files_to_index(Path(source))
     print(knowledge_files)
 
@@ -28,7 +48,7 @@ def build_index(source: str, output: str, *, force: bool = False) -> None:
             for page_no, page in enumerate(f):
                 text = page.get_text("text")
                 for paragraph in chunk_paragraphs(text):
-                    print(page_no, paragraph)
+                    print(split_with_overlap(paragraph, tokenizer, MAX_TOKENS))
 
 def get_files_to_index(root: str) -> list[str]:
     """Search the knowledge directory for files to index. Returns a list of file paths."""
@@ -37,7 +57,7 @@ def get_files_to_index(root: str) -> list[str]:
 def split_with_overlap(text: str, tokenizer, max_tokens: int) -> list[str]:
     token_ids = tokenizer.encode(text, add_special_tokens=False)
     if len(token_ids) <= max_tokens:
-        return list[str]
+        return list[text]
 
     step = max_tokens - PARAGRAPH_OVERLAP_TOKENS
     pieces = []
