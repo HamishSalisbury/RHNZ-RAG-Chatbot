@@ -220,3 +220,5 @@ __marimo__/
 
 # ChromaDB
 chroma_data/
+
+index/
