@@ -23,4 +23,3 @@ def extract(pdf_path: Path, images_dir: Path = DEFAULT_IMAGES_DIR) -> ExtractedD
             f"Use Path.resolve() at the call site if it comes from a CLI arg."
         )
     images_dir.mkdir(parents=True, exist_ok=True)
-    ...
