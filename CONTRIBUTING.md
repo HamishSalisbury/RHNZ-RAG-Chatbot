@@ -13,3 +13,8 @@ Or
 ```
 docker compose up
 ```
+
+To run build_index
+```
+python -m ingestion.build_index
+```

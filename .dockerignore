@@ -1,8 +1,13 @@
 .env
+.env.*
 .git
+.dockerignore
 **/__pycache__
 **/*.pyc
 venv/
+.venv/
+*.sqlite3
+models/
 
 # Chroma DB
 chroma_data/

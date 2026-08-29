@@ -74,6 +74,11 @@ curl http://localhost:8000/health
 
 --- -->
 
+## Running ingestion pipeline manually`
+```
+python -m ingestion.build_index --source /knowledge --output /index --images /images
+```
+
 ## Author
 
 Hamish Salisbury, 2026
