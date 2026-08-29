@@ -1,6 +1,10 @@
 services:
   chatbot:
-    build: .
+    build:
+      context: .
+      args:
+        EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+        MAX_TOKENS: ${MAX_TOKENS:-480}
     env_file: .env
     ports:
       - ${PORT:-8000}:${PORT:-8000}
