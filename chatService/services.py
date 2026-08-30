@@ -47,15 +47,19 @@ client = genai.Client(
     http_options=types.HttpOptions(timeout=settings.LLM_TIMEOUT_S*1000),
 )
 
+SYSTEM_INSTRUCTION = (
+    "You are a Rink Hockey rules assistant. Answer ONLY using the rules "
+    "provided. If they don't contain the answer, say you couldn't find it. "
+    "Do not use outside knowledge."
+)
+
 def generate_answer(prompt: str) -> str:
     
     response = client.models.generate_content(
     model=settings.LLM_MODEL,
     contents=prompt,
     config=types.GenerateContentConfig(
-        system_instruction='''You are a Rink Hockey rules assistant. Answer ONLY using
-the rules provided. If they don't contain the answer, say you couldn't find it.
-Do not use outside knowledge.''',
+        system_instruction=SYSTEM_INSTRUCTION,
         max_output_tokens=400,
         temperature=0.5,
         ),
