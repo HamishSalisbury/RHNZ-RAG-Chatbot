@@ -134,6 +134,10 @@ CHROMA_PERSIST_DIR = os.environ.get(
 
 REST_FRAMEWORK = {
     "NUM_PROXIES": int(os.environ.get("NUM_PROXIES", 0)),
+    "DEFAULT_THROTTLE_RATES": {
+        "burst": os.environ.get("THROTTLE_BURST"),
+        "sustained": os.environ.get("THROTTLE_SUSTAINED")
+    }
 }
 
 RULES_TOP_K = int(os.environ["RULES_TOP_K"])  # KeyError at startup if unset

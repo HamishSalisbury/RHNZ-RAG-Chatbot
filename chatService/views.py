@@ -1,10 +1,11 @@
 from django.shortcuts import render
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework import status
 from .services import query_chatbot
 from google.genai import errors
 from .services import query_chatbot, generate_answer
+from throttles import BurstRateThrottle, SustainedRateThrottle
 
 @api_view(['GET'])
 def health_check(request):
@@ -14,6 +15,7 @@ def health_check(request):
     return Response({"status": "ok"})
 
 @api_view(['POST'])
+@throttle_classes([BurstRateThrottle, SustainedRateThrottle])
 def ask_chatbot(request):
     question = request.data.get('question')
     if not question:
