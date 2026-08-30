@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-const API_URL = "http://localhost:8000/v1/ask/";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_URL = API_BASE_URL + "/v1/ask/";
 const GITHUB_URL = "https://github.com/HamishSalisbury/RHNZ-RAG-Chatbot";
 const RULES_URL = "https://www.rhnz.co.nz/_files/ugd/104e29_4b09de6d5d764d3bb9de58b9a3f3f101.pdf";
 const ACCENT = "#e8442a";
