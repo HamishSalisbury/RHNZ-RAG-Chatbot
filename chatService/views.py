@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
 from .services import query_chatbot
+from google.genai import errors
+from .services import query_chatbot, generate_answer
 
 @api_view(['GET'])
 def health_check(request):
@@ -30,19 +32,32 @@ def ask_chatbot(request):
         )
 
     docs = res["documents"][0]
-    dists = res["distances"][0]
     metas = res["metadatas"][0]
 
-    lines = []
-    for i in range(len(docs)):
-        m = metas[i]
-        lines.append(
-            f"--- result {i}  (distance {dists[i]:.4f})  "
-            f"{m.get('source', '?')} page {m.get('page', '?')}  "
-            f"chunk {m.get('chunk_index', '?')} ---"
+    # nothing cleared the similarity threshold -> don't call the LLM
+    if not docs:
+        return Response({"answer": [{"type": "text",
+            "text": "I couldn't find anything relevant in the rules."}]})
+
+    # build the rules block: each chunk with its rule_id so the model can cite it
+    rules_block = "\n\n".join(
+        f"[{metas[i].get('rule_id', '?')}] {docs[i]}"
+        for i in range(len(docs))
+    )
+    prompt = f"Question: {question}\n\nRules:\n{rules_block}"
+
+    try:
+        answer_text = generate_answer(prompt)
+    except errors.APIError:
+        return Response(
+            {"error": "The language model could not be reached."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
-        lines.append(docs[i])
 
-    answer_text = "\n".join(lines)
+    if not answer_text:
+        return Response(
+            {"error": "The language model returned an empty response."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
-    return Response({"answer": [{"type": "text", "text": answer_text}]})      
+    return Response({"answer": [{"type": "text", "text": answer_text}]})
