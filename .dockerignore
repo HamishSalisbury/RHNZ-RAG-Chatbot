@@ -8,6 +8,7 @@ venv/
 .venv/
 *.sqlite3
 models/
+rhnz-chatbot-frontend
 
 # Chroma DB
 chroma_data/
