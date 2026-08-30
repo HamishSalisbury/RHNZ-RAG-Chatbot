@@ -10,7 +10,7 @@ import os
 # Must be set BEFORE anything imports Django settings.
 os.environ.setdefault("RULES_TOP_K", "3")
 os.environ.setdefault("PATH_TO_INDEX", "test-index")
-os.environ.setdefault("MIN_COSINE_SIMILARITY", "0.4")
+os.environ.setdefault("MIN_COSINE_SIMILIARTY", "0.4")
 os.environ.setdefault("GEMINI_API_KEY", "dummy-key")
 os.environ.setdefault("LLM_MODEL", "gemini-3.5-flash")
 os.environ.setdefault("LLM_TIMEOUT_S", "10")

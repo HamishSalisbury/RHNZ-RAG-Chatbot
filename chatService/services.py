@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 import sys
 from config.settings import RULES_TOP_K
 from config.settings import PATH_TO_INDEX
-from config.settings import MIN_COSINE_SIMILIARITY
+from config.settings import MIN_COSINE_SIMILARITY 
 from google import genai
 from google.genai import types
 def query_chatbot(query):
@@ -34,7 +34,7 @@ def query_chatbot(query):
     dists = res["distances"][0]
     metas = res["metadatas"][0]
 
-    keep = [i for i, dist in enumerate(dists) if (1 - dist) >= MIN_COSINE_SIMILIARITY]
+    keep = [i for i, dist in enumerate(dists) if (1 - dist) >= MIN_COSINE_SIMILARITY]
 
     res["documents"][0] = [docs[i] for i in keep]
     res["distances"][0] = [dists[i] for i in keep]
