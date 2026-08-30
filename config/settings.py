@@ -40,10 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'chatService'
+    'chatService',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -52,6 +54,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+import os
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
 ROOT_URLCONF = 'config.urls'
 
@@ -130,7 +134,7 @@ CHROMA_PERSIST_DIR = os.environ.get(
 
 RULES_TOP_K = int(os.environ["RULES_TOP_K"])  # KeyError at startup if unset
 PATH_TO_INDEX = os.environ["CHROMA_PERSIST_DIR"]
-MIN_COSINE_SIMILIARITY= float(os.environ["MIN_COSINE_SIMILIARTY"])
+MIN_COSINE_SIMILARITY= float(os.environ["MIN_COSINE_SIMILARITY"])
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 LLM_MODEL = os.environ["LLM_MODEL"]
 LLM_TIMEOUT_S = int(os.environ["LLM_TIMEOUT_S"])
