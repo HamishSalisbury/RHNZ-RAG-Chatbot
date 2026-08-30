@@ -1,10 +1,14 @@
 import os
 import chromadb
+import requests
+from django.conf import settings
 from sentence_transformers import SentenceTransformer
 import sys
 from config.settings import RULES_TOP_K
 from config.settings import PATH_TO_INDEX
 from config.settings import MIN_COSINE_SIMILIARITY
+from google import genai
+from google.genai import types
 def query_chatbot(query):
 
     client = chromadb.PersistentClient(path=PATH_TO_INDEX)
@@ -38,3 +42,25 @@ def query_chatbot(query):
 
     return res  
 
+client = genai.Client(
+    api_key=settings.GEMINI_API_KEY,
+    http_options=types.HttpOptions(timeout=settings.LLM_TIMEOUT_S*1000),
+)
+
+def generate_answer(prompt: str) -> str:
+    
+    response = client.models.generate_content(
+    model=settings.LLM_MODEL,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        system_instruction='''You are a Rink Hockey rules assistant. Answer ONLY using
+the rules provided. If they don't contain the answer, say you couldn't find it.
+Do not use outside knowledge.''',
+        max_output_tokens=400,
+        temperature=0.5,
+        ),
+    )
+
+    return response.text
+
+    

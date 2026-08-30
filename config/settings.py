@@ -129,3 +129,6 @@ CHROMA_PERSIST_DIR = os.environ.get(
 RULES_TOP_K = int(os.environ["RULES_TOP_K"])  # KeyError at startup if unset
 PATH_TO_INDEX = os.environ["CHROMA_PERSIST_DIR"]
 MIN_COSINE_SIMILIARITY= float(os.environ["MIN_COSINE_SIMILIARTY"])
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+LLM_MODEL = os.environ["LLM_MODEL"]
+LLM_TIMEOUT_S = int(os.environ["LLM_TIMEOUT_S"])
