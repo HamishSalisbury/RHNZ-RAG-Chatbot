@@ -125,3 +125,7 @@ CHROMA_PERSIST_DIR = os.environ.get(
     "CHROMA_PERSIST_DIR",
     str(BASE_DIR / "chroma_data")
 )
+
+RULES_TOP_K = int(os.environ["RULES_TOP_K"])  # KeyError at startup if unset
+PATH_TO_INDEX = os.environ["CHROMA_PERSIST_DIR"]
+MIN_COSINE_SIMILIARITY= float(os.environ["MIN_COSINE_SIMILIARTY"])
