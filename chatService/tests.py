@@ -1,39 +1,44 @@
-from unittest.mock import patch
-
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
-
-from google.genai import errors
 import os
 
-# Must be set BEFORE anything imports Django settings.
 os.environ.setdefault("RULES_TOP_K", "3")
 os.environ.setdefault("PATH_TO_INDEX", "test-index")
 os.environ.setdefault("MIN_COSINE_SIMILIARTY", "0.4")
 os.environ.setdefault("GEMINI_API_KEY", "dummy-key")
 os.environ.setdefault("LLM_MODEL", "gemini-3.5-flash")
 os.environ.setdefault("LLM_TIMEOUT_S", "10")
+os.environ.setdefault("THROTTLE_BURST", "20/min")
+os.environ.setdefault("THROTTLE_SUSTAINED", "30/day")
 
-# Now it's safe to import things that touch settings.
 from unittest.mock import patch
 from django.urls import reverse
+from django.test import override_settings
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APITestCase
 from google.genai import errors
-# A valid query_chatbot return: chunks that cleared the threshold,
-# so the view proceeds to call the LLM.
+
+
 FAKE_CHUNKS = {
     "documents": [["A team may request two timeouts per half."]],
     "metadatas": [[{"rule_id": "9.1", "source": "rules.pdf", "page": 10}]],
     "distances": [[0.23]],
 }
 
+CACHE_TEST_SETTINGS = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
 
+# The real production burst limit (must match settings.py / .env).
+BURST_LIMIT = int(os.environ["THROTTLE_BURST"].split("/")[0])
+
+
+@override_settings(CACHES=CACHE_TEST_SETTINGS)
 class AskChatbotLLMFailureTests(APITestCase):
     def setUp(self):
-        # reverse() uses the URL name from your urls.py (name='ask_chatbot')
         self.url = reverse("ask_chatbot")
+        cache.clear()  # start each test with an empty throttle counter
 
     @patch("chatService.views.generate_answer")
     @patch("chatService.views.query_chatbot")
@@ -83,3 +88,45 @@ class AskChatbotLLMFailureTests(APITestCase):
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         mock_generate.assert_not_called()
+
+
+@override_settings(CACHES=CACHE_TEST_SETTINGS)
+class RateLimitingTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("ask_chatbot")
+        cache.clear()
+
+    def _post(self, ip):
+        with patch("chatService.views.query_chatbot", return_value={
+            "documents": [["chunk"]],
+            "metadatas": [[{"rule_id": "1.1"}]],
+            "distances": [[0.2]],
+        }), patch("chatService.views.generate_answer", return_value="ok"):
+            return self.client.post(
+                self.url,
+                {"question": "hi"},
+                format="json",
+                REMOTE_ADDR=ip,
+            )
+
+    def test_single_ip_is_throttled_after_limit(self):
+        """The first BURST_LIMIT requests pass; the next is throttled with 429."""
+        ip = "10.0.0.1"
+
+        for _ in range(BURST_LIMIT):
+            self.assertEqual(self._post(ip).status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self._post(ip).status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_different_ips_are_throttled_separately(self):
+        """Exhausting one IP's allowance does not affect a different IP."""
+        ip_a = "10.0.0.1"
+        ip_b = "10.0.0.2"
+
+        for _ in range(BURST_LIMIT):
+            self.assertEqual(self._post(ip_a).status_code, status.HTTP_200_OK)
+        self.assertEqual(self._post(ip_a).status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+        for _ in range(BURST_LIMIT):
+            self.assertEqual(self._post(ip_b).status_code, status.HTTP_200_OK)
+        self.assertEqual(self._post(ip_b).status_code, status.HTTP_429_TOO_MANY_REQUESTS)

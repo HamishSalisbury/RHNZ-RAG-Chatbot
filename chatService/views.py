@@ -5,7 +5,7 @@ from rest_framework import status
 from .services import query_chatbot
 from google.genai import errors
 from .services import query_chatbot, generate_answer
-from throttles import BurstRateThrottle, SustainedRateThrottle
+from .throttles import BurstRateThrottle, SustainedRateThrottle
 
 @api_view(['GET'])
 def health_check(request):
