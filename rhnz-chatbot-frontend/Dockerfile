@@ -16,4 +16,4 @@ FROM nginx:alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
 
-CMD ["sh", "-c", "nginx -T && nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "echo '=== NGINX CONFIG ==='; nginx -T; echo '=== END CONFIG ==='; nginx -g 'daemon off;'"]
