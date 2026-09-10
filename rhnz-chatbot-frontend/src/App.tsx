@@ -34,7 +34,7 @@ export default function App() {
       setAnswer(data.answer[0].text);
     } catch (err) {
       setStatus("error");
-      setAnswer("Request failed: " + (err instanceof Error ? err.message : String(err)));
+      setAnswer("ChatService is not available right now");
     }
   }
 
