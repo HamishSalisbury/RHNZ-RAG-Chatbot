@@ -18,4 +18,4 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 
 COPY nginx.conf.template /etc/nginx/conf.d/default.conf
 
-CMD ["sh", "-c", "sed -i \"s/\\${PORT}/$PORT/g\" /etc/nginx/conf.d/default.conf && echo PORT=$PORT && echo '--- LISTEN PORTS ---' && nginx -T 2>&1 | grep -E 'listen[[:space:]]' && echo '--- END ---' && nginx -g 'daemon off;'"]
+CMD ["nginx", "-g", "daemon off;"]
