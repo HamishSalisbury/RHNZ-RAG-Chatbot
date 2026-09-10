@@ -52,7 +52,7 @@ Full rationale for each of these decisions is in the Design Document below.
 
 | Document | Description | Link |
 |----------|-------------|------|
-| Design Document | Full system architecture, design decisions and rationale | [View](https://docs.google.com/document/d/1nLufA5eKJQWDMl6mXlbp06IHfQTBe573ItAlfiX0hRk/edit?tab=t.0) |
+| Design Document | Full system architecture, design decisions and rationale | [View](https://docs.google.com/document/d/1hMMrCLHL1n_LFuV3Edp3gXC7mKJBVxst/edit?usp=sharing&ouid=108520918375876750178&rtpof=true&sd=true) |
 | Requirements Document | Objectives, scope, functional and non-functional requirements | [View](https://docs.google.com/document/d/1cd-emBGzdRLcQsqyWsjQpgX-uF0lwgd_qcMh_hbCc1Q/edit?tab=t.0) |
 | Project Plan | Deliverables, work breakdown, milestones, risk register | [View](https://docs.google.com/document/d/1AVzZTAVaveXA1dcjn3KmIyJ2Sgxh_1_EzvJLu7mgNaQ/edit?tab=t.0) |
 | RHNZ Stats API Findings (Spike) | Results from a research session gathering information for designing the SIM| [View](https://docs.google.com/document/d/1aDfK6KfliTBhCO1QxOy6uGos_1kW0o03c4bV2FusgFg/edit?usp=sharing) |
