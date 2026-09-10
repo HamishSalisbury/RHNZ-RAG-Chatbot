@@ -3,25 +3,24 @@ ENV PYTHONUNBUFFERED=1 \
     HF_HOME=/opt/models \
     CHROMA_PERSIST_DIR=/app/chroma_data
 
-ARG EMBEDDING_MODEL
-ARG MAX_TOKENS
-ENV EMBEDDING_MODEL=$EMBEDDING_MODEL \
-    MAX_TOKENS=$MAX_TOKENS
-
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
- && pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
-# Pre-download the embedding model into the image
+ARG EMBEDDING_MODEL
+ENV EMBEDDING_MODEL=$EMBEDDING_MODEL
 RUN python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['EMBEDDING_MODEL'])"
 
-ENV HF_HUB_OFFLINE=1 \
-    TRANSFORMERS_OFFLINE=1
+ENV HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 
 COPY knowledge/ ./knowledge/
 COPY ingestion/ ./ingestion/
+
+ARG MAX_TOKENS
+ENV MAX_TOKENS=$MAX_TOKENS
+
 RUN python -m ingestion.build_index
 
 COPY . .
